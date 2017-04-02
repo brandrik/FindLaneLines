@@ -9,6 +9,7 @@ import cv2
 import matplotlib.image as mpimg
 import numpy as np
 import os
+from math_functions import Line, Sequence
 
 
 def grayscale(img: np.ndarray):
@@ -54,7 +55,7 @@ def region_of_interest(img, vertices):
     return masked_image
 
 
-def draw_lines(img, lines, color=[255, 0, 0], thickness=2):
+def draw_lines(img: np.ndarray, lines: Sequence[Line], color=[255, 0, 0], thickness=2):
     """
     NOTE: this is the function you might want to use as a starting point once you want to
     average/extrapolate the line segments you detect to map out the full
@@ -71,9 +72,19 @@ def draw_lines(img, lines, color=[255, 0, 0], thickness=2):
     If you want to make the lines semi-transparent, think about combining
     this function with the weighted_img() function below
     """
+
+    # separate left and right line segments
+    # average the position of each of the lines
+    # extrapolate to the top and bottom of the lane
+
+    #for line in lines:
+    #    for x1,y1,x2,y2 in line:
+    #        cv2.line(img, (x1, y1), (x2, y2), color, thickness)
+
+
     for line in lines:
-        for x1,y1,x2,y2 in line:
-            cv2.line(img, (x1, y1), (x2, y2), color, thickness)
+       #for line.x1,line.y1,line.x2,line.y2 in line:
+            cv2.line(img, (line.x1, line.y1), (line.x2, line.y2), color, thickness)
 
 def hough_lines(img, rho, theta, threshold, min_line_len, max_line_gap):
     """
@@ -83,6 +94,11 @@ def hough_lines(img, rho, theta, threshold, min_line_len, max_line_gap):
     """
     lines = cv2.HoughLinesP(img, rho, theta, threshold, np.array([]), minLineLength=min_line_len, maxLineGap=max_line_gap)
     line_img = np.zeros((img.shape[0], img.shape[1], 3), dtype=np.uint8)
+
+    # use tuples for line:  [[x1,y1,x2,y2]]
+
+
+    lines = [Line(*line[0]) for line in lines]
     draw_lines(line_img, lines)
     return line_img
 
