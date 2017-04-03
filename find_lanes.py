@@ -6,15 +6,15 @@ import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 import numpy as np
 import cv2
-from image_processing_functions import grayscale, region_of_interest, gaussian_blur, canny, hough_lines, weighted_img, draw_lines
-from math_functions import StraightLine, slope, extrapolate_line, line_interception_y_axis
-
 import os
 from moviepy.editor import VideoFileClip
 from IPython.display import HTML
-#import image_processing_functions
-import pdb
+
 from typing import Sequence
+
+from image_processing_functions import grayscale, region_of_interest, gaussian_blur, canny, hough_lines, weighted_img, draw_lines
+from math_functions import StraightLine, slope, extrapolate_line, line_interception_y_axis
+#import pdb
 
 
 
@@ -34,8 +34,8 @@ IMSHAPE = image.shape # (y,x, num channels ) e.g. (540, 960, 3)  imshape[0] -> y
 CENTER_X = int(IMSHAPE[1] / 2)   # half of x scale in the image
 CENTER_Y = int(IMSHAPE[0] / 2)   # half of y scale in the image
 
-TOP_LANE_Y_POS        = int(0.58 * IMSHAPE[0])  # [pixel], top of lane y position
-OFFSET_X              = int(0.09 * IMSHAPE[1])   # [pixel], defines offset from the center of top of the
+TOP_LANE_Y_POS        = int(0.6 * IMSHAPE[0])   # [pixel], top of lane y position  0.58
+OFFSET_X              = int(0.09 * IMSHAPE[1])   # [pixel], defines offset from the center of top of the   0.09
                                                  # lane to the right a. left to define masking polygon
 BOTTOM_RIGHT_OFFSET_X = int(0.04 * IMSHAPE[1])   # [pixel], defines offset from the center of top of the
                                                  # lane to the right a. left to define masking polygon
@@ -45,6 +45,12 @@ BOTTOM_LEFT_X_POS     = int(0.1 * IMSHAPE[1])    # [pixel], bottom left x positi
 LINE_THICKNESS        = 10                       # thickness of line to mask edges introduced by masking
 
 MIN_SLOPE_LANE        = 0.4                      # compare abs. value of slopes of lines to filter non-lane lines
+
+## initializing points for masking polygon
+(X0, Y0) = (0,0)   # left bottom point
+(X1, Y1) = (0,0)   # left top point
+(X2, Y2) = (0,0)   # right top point
+(X3, Y3) = (0,0)   # right bottom point
 
 
 ## Smoothing
@@ -78,7 +84,7 @@ HOUGH_ACCUMULATION_THR = 20    # number of votes in accumulation matrix,
 
 # 1 FUNCTIONS #### 
 
-def process_image(image):
+def process_image(image: np.ndarray) -> np.ndarray:
     # NOTE: The output you return should be a color image (3 channel) for processing video below
     # TODO: put your pipeline here,
     # you should return the final output (image where lines are drawn on lanes)
@@ -94,20 +100,13 @@ def process_image(image):
     # 1 CONVERT TO GRAY SCALE 
     gray = grayscale(image)  # returns one color channel, needs to be set to gray when using imshow()
     
-    
+    import pdb; pdb.set_trace()
     # 2 MASKING - REGION OF INTEREST
     ## reduce the number of pixels to be processed, to lower reduce computational effort for e.g gaussian blur
     ## compute vertices for triangle masking
     ## This time we are defining a four sided polygon to mask
-    
-    ## (0, ymax), (0,0), (xmax/2-offset, 0) , (xmax/2+offset, ymax)
-    
-    (X0, Y0) = (BOTTOM_LEFT_X_POS, IMSHAPE[0])                    # left bottom point
-    (X1, Y1) = (CENTER_X - OFFSET_X, TOP_LANE_Y_POS)              # left top point
-    (X2, Y2) = (CENTER_X + OFFSET_X, TOP_LANE_Y_POS)              # right top point
-    (X3, Y3) = (IMSHAPE[1] - BOTTOM_RIGHT_OFFSET_X, IMSHAPE[0])   # right bottom point
-    
-    vertices = np.array([[(X0, Y0), (X1, Y1), (X2, Y2), (X3, Y3)]], dtype=np.int32)
+
+    vertices = compute_masking_vertices(image)
     masked = region_of_interest(gray, vertices)
     
     
@@ -129,7 +128,14 @@ def process_image(image):
 
     # 5 HOUGH TRANSFORMATION FOR LINE DETECTION
         # lines not representing a lane are removed from the result
-    lines = hough_lines(edges, RHO, THETA, HOUGH_ACCUMULATION_THR, MIN_LINE_LEN, MAX_LINE_GAP, MIN_SLOPE_LANE, TOP_LANE_Y_POS, IMSHAPE[0])
+    lines = hough_lines(edges, RHO, THETA, HOUGH_ACCUMULATION_THR, MIN_LINE_LEN, MAX_LINE_GAP)  # Sequence[StraightLine]
+
+    
+   
+    lines = process_lines(lines, MIN_SLOPE_LANE, TOP_LANE_Y_POS, IMSHAPE[0]) # remove non-lane lines
+    
+    line_img = np.zeros((img.shape[0], img.shape[1], 3), dtype=np.uint8)
+    draw_lines(line_img, lines)
 
     # 6 OVERLAY IMAGES: overlay line image on top of the irginal one.
     weighted = weighted_img(lines, image, α, β, λ)
@@ -139,7 +145,47 @@ def process_image(image):
     return weighted
 
 
-marked = process_image(image)
-plt.imshow(marked)
+
+def compute_masking_vertices(image: np.ndarray) -> np.array:
+
+    """ Computes vertices for masking
+    Returns: vertices as np.array """
+
+    (X0, Y0) = (BOTTOM_LEFT_X_POS, IMSHAPE[0])                    # left bottom point
+    (X1, Y1) = (CENTER_X - OFFSET_X, TOP_LANE_Y_POS)              # left top point
+    (X2, Y2) = (CENTER_X + OFFSET_X, TOP_LANE_Y_POS)              # right top point
+    (X3, Y3) = (IMSHAPE[1] - BOTTOM_RIGHT_OFFSET_X, IMSHAPE[0])   # right bottom point
+    
+    vertices = np.array([[(X0, Y0), (X1, Y1), (X2, Y2), (X3, Y3)]], dtype=np.int32)
+    return vertices
+
+def process_lines(lines: Sequence[StraightLine], min_slope: int, ymin: int, ymax: int) -> Sequence[StraightLine]:
+    """Returns: Sequence of lines fulfilling min slop condition
+       trying to remove everything that is not assumed to be a lane line"""
+
+    # 1 filter and separate  ine segments
+    # 2 average the position of each of the lines
+    # 3 extrapolate to the top and bottom of the lane
+
+    # Note: average first before extrapolating to keep stronger imapct of longer lines on the average lines
+
+    # 1 FILTER LINES (only consider line beeing lane lines)
+        # filter by slope: remove horizontal lines, when filtering in left and right lane group
+
+    negative_slope_lines = remove_lines(lines, -1, -min_slope)
+    negative_slope_lines = remove_lines(lines, min_slope, 1)
+
+    # 2 AVERAGE the position of the lines
+    negative_slope_line = average_straight_lines(negative_slope_lines)
+    positive_slope_line = average_straight_lines(positive_slope_lines)
+
+    # 3 EXRTAPOLATE
+    extrapolated_neg_slope_line = extrapolate_line(negative_slope_line, ymin, ymax)
+    extrapolated_pos_slope_line = extrapolate_line(positive_slope_line, ymin, ymax)
+
+
+    lines = [extrapolated_neg_slope_line] + [extrapolated_pos_slope_line] # combine to one list
+
+    return lines
 
 
