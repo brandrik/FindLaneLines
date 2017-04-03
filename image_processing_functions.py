@@ -1,8 +1,7 @@
 # Exported from given sectino in Ps.pynb from Udacity
-
+# extended, adjusted or added functions "hough_lines", "draw_lines", "remove_lines"
 
 import math
-import argparse
 #from typing import Sequence
 
 import cv2
@@ -55,8 +54,8 @@ def region_of_interest(img, vertices):
     return masked_image
 
 
-def draw_lines(img: np.ndarray, lines: Sequence[StraightLine], min_slope_lane, max_slope_lane,
-               TOP_LANE_Y_POS, YMAX, color=[255, 0, 0], thickness=10):
+def draw_lines(img: np.ndarray, lines: Sequence[StraightLine], min_slope_lane, 
+TOP_LANE_Y_POS, YMAX, color=[255, 0, 0], thickness=10):
     """
     NOTE: this is the function you might want to use as a starting point once you want to
     average/extrapolate the line segments you detect to map out the full
@@ -74,14 +73,15 @@ def draw_lines(img: np.ndarray, lines: Sequence[StraightLine], min_slope_lane, m
     this function with the weighted_img() function below
     """
 
-    # separate left and right line segments
-    # average the position of each of the lines
-    # extrapolate to the top and bottom of the lane
+    # 1 filter and separate left and right line segments
+    # 2 average the position of each of the lines
+    # 3 extrapolate to the top and bottom of the lane
 
-    # filter lines (only consider line beeing lane lines)
+    # FILTER LINES (only consider line beeing lane lines)
+        # filter by slope: remove horizontal lines, when filtering in left and right lane group
 
-    left_lane_lines = remove_lines(lines, -max_slope_lane, -min_slope_lane)
-    right_lane_lines = remove_lines(lines, min_slope_lane, max_slope_lane)
+    left_lane_lines = remove_lines(lines, -1, -min_slope_lane)
+    right_lane_lines = remove_lines(lines, min_slope_lane, 1)
 
     # average the position of the lines
     left_lane_line = average_straight_lines(left_lane_lines)
@@ -97,7 +97,7 @@ def draw_lines(img: np.ndarray, lines: Sequence[StraightLine], min_slope_lane, m
     for line in lane_lines:
         cv2.line(img, (line.x1, line.y1), (line.x2, line.y2), color, thickness)
 
-def hough_lines(img, rho, theta, threshold, min_line_len, max_line_gap, min_slope_lane, max_slope_lane, TOP_LANE_Y_POS, YMAX):
+def hough_lines(img, rho, theta, threshold, min_line_len, max_line_gap, min_slope_lane, TOP_LANE_Y_POS, YMAX):
     """
     `img` should be the output of a Canny transform.
 
@@ -108,11 +108,8 @@ def hough_lines(img, rho, theta, threshold, min_line_len, max_line_gap, min_slop
 
     # use tuples for line:  [[x1,y1,x2,y2]]
     lines = [StraightLine(*line[0]) for line in lines]
-
-
-    draw_lines(line_img, lines, min_slope_lane, max_slope_lane, TOP_LANE_Y_POS, YMAX)
-    #return line_img
-    #import pdb; pdb.set_trace()
+    draw_lines(line_img, lines, min_slope_lane, TOP_LANE_Y_POS, YMAX)
+ 
     return line_img
 
 # Python 3 has support for cool math symbols.
@@ -140,5 +137,4 @@ def remove_lines(lines: Sequence[StraightLine], min_slope, max_slope) -> Sequenc
 
 
     leftover_lines = [line for line in lines if slope(line) > min_slope and slope(line) < max_slope]
-    #import pdb; pdb.set_trace()
     return leftover_lines

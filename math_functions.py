@@ -44,7 +44,7 @@ def average_straight_lines(lines: Sequence[StraightLine]) -> Sequence[StraightLi
     """ Returns: the average of sequence of lines, if list is not empty. """
     # y = m1*x + b1
     # y = m2*x + b2
-    # -> average over m1 and b1, easier -> average over start and endpoints
+    # -> average over slope 'm'' and interception w/ y axis 'b', easier -> average over start and endpoints
     num_lines = len(lines)
     if num_lines < 2: return(lines)
     average_x1 = int(sum(line.x1 for line in lines)/num_lines)

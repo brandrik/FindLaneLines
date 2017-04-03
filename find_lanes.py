@@ -34,7 +34,7 @@ IMSHAPE = image.shape # (y,x, num channels ) e.g. (540, 960, 3)  imshape[0] -> y
 CENTER_X = int(IMSHAPE[1] / 2)   # half of x scale in the image
 CENTER_Y = int(IMSHAPE[0] / 2)   # half of y scale in the image
 
-TOP_LANE_Y_POS        = int(0.58  * IMSHAPE[0])  # [pixel], top of lane y position
+TOP_LANE_Y_POS        = int(0.58 * IMSHAPE[0])  # [pixel], top of lane y position
 OFFSET_X              = int(0.09 * IMSHAPE[1])   # [pixel], defines offset from the center of top of the
                                                  # lane to the right a. left to define masking polygon
 BOTTOM_RIGHT_OFFSET_X = int(0.04 * IMSHAPE[1])   # [pixel], defines offset from the center of top of the
@@ -86,9 +86,10 @@ def process_image(image):
     # PIPELINE
         ## 1) GRAY SCALE
         ## 2) MASKING
-        ## 3) 
-        ## 4) 
-        ## 5) Overlay
+        ## 3) REMOVING NOISE USING GAUSSIAN BLUR
+        ## 4) CANNY EDGE DETECTION
+        ## 5) HOUGHT LINE DETECTION (also removing non-lane lines)
+        ## 6) Overlay detected lanes on original image
     
     # 1 CONVERT TO GRAY SCALE 
     gray = grayscale(image)  # returns one color channel, needs to be set to gray when using imshow()
@@ -120,39 +121,16 @@ def process_image(image):
     edges = canny(blurred, LOW_CANNY_GRAD_INTENS_THR, HIGHER_CANNY_GRAD_INTENS_THR)  # image w/ edges emphasized
 
     
-    # overpaint edge introduced by prior masking
+    ## overpaint edge introduced by prior masking
     cv2.line(edges,(X0,Y0),(X1,Y1),(0),LINE_THICKNESS)
     cv2.line(edges,(X1,Y1),(X2,Y2),(0),LINE_THICKNESS)
     cv2.line(edges,(X2,Y2),(X3,Y3),(0),LINE_THICKNESS)
     
 
     # 5 HOUGH TRANSFORMATION FOR LINE DETECTION
-    lines = hough_lines(edges, RHO, THETA, HOUGH_ACCUMULATION_THR, MIN_LINE_LEN, MAX_LINE_GAP, MIN_SLOPE_LANE, 1, TOP_LANE_Y_POS, IMSHAPE[0])
+        # lines not representing a lane are removed from the result
+    lines = hough_lines(edges, RHO, THETA, HOUGH_ACCUMULATION_THR, MIN_LINE_LEN, MAX_LINE_GAP, MIN_SLOPE_LANE, TOP_LANE_Y_POS, IMSHAPE[0])
 
-    # 6 FILTER LANE LINES, DRAW LINES
-    
-    
-    
-  
-    #simg  = edges
-    #import pdb; pdb.set_trace()
-    #lines = cv2.HoughLinesP(edges, RHO, THETA, HOUGH_ACCUMULATION_THR,np.array([]) ,MIN_LINE_LEN, MAX_LINE_GAP)
-    #line_img = np.zeros((img.shape[0], img.shape[1], 3), dtype=np.uint8)
-    #print("lines:", lines)
-    #print("type ", types(lines[0]))
-    
-    
-
-    #newlines = [Line(*line[0]) for line in lines]
-    #print("newlines ", newlines)
-    
-    #print("line", lines[0])
-    #line = lines[4]
-    #print("line new", line[0][1])
-    #print("slope", slope(line[0]))
-    #draw_lines(line_img, lines)    
-    #lines   = line_img
-    
     # 6 OVERLAY IMAGES: overlay line image on top of the irginal one.
     weighted = weighted_img(lines, image, α, β, λ)
     
