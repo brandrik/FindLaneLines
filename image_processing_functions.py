@@ -9,7 +9,7 @@ import cv2
 import matplotlib.image as mpimg
 import numpy as np
 import os
-from math_functions import Line, Sequence
+from math_functions import StraightLine, Sequence, slope, average_straight_lines, extrapolate_line
 
 
 def grayscale(img: np.ndarray):
@@ -55,7 +55,8 @@ def region_of_interest(img, vertices):
     return masked_image
 
 
-def draw_lines(img: np.ndarray, lines: Sequence[Line], color=[255, 0, 0], thickness=2):
+def draw_lines(img: np.ndarray, lines: Sequence[StraightLine], min_slope_lane, max_slope_lane,
+               TOP_LANE_Y_POS, YMAX, color=[255, 0, 0], thickness=10):
     """
     NOTE: this is the function you might want to use as a starting point once you want to
     average/extrapolate the line segments you detect to map out the full
@@ -77,16 +78,26 @@ def draw_lines(img: np.ndarray, lines: Sequence[Line], color=[255, 0, 0], thickn
     # average the position of each of the lines
     # extrapolate to the top and bottom of the lane
 
-    #for line in lines:
-    #    for x1,y1,x2,y2 in line:
-    #        cv2.line(img, (x1, y1), (x2, y2), color, thickness)
+    # filter lines (only consider line beeing lane lines)
+
+    left_lane_lines = remove_lines(lines, -max_slope_lane, -min_slope_lane)
+    right_lane_lines = remove_lines(lines, min_slope_lane, max_slope_lane)
+
+    # average the position of the lines
+    left_lane_line = average_straight_lines(left_lane_lines)
+    right_lane_line = average_straight_lines(right_lane_lines)
+
+    # extrapolate
+    extrapolated_left_line = extrapolate_line(left_lane_line, TOP_LANE_Y_POS, YMAX)
+    extrapolated_right_line = extrapolate_line(right_lane_line, TOP_LANE_Y_POS, YMAX)
 
 
-    for line in lines:
-       #for line.x1,line.y1,line.x2,line.y2 in line:
-            cv2.line(img, (line.x1, line.y1), (line.x2, line.y2), color, thickness)
+    lane_lines = [extrapolated_left_line] + [extrapolated_right_line] # combine to one list
 
-def hough_lines(img, rho, theta, threshold, min_line_len, max_line_gap):
+    for line in lane_lines:
+        cv2.line(img, (line.x1, line.y1), (line.x2, line.y2), color, thickness)
+
+def hough_lines(img, rho, theta, threshold, min_line_len, max_line_gap, min_slope_lane, max_slope_lane, TOP_LANE_Y_POS, YMAX):
     """
     `img` should be the output of a Canny transform.
 
@@ -96,10 +107,12 @@ def hough_lines(img, rho, theta, threshold, min_line_len, max_line_gap):
     line_img = np.zeros((img.shape[0], img.shape[1], 3), dtype=np.uint8)
 
     # use tuples for line:  [[x1,y1,x2,y2]]
+    lines = [StraightLine(*line[0]) for line in lines]
 
 
-    lines = [Line(*line[0]) for line in lines]
-    draw_lines(line_img, lines)
+    draw_lines(line_img, lines, min_slope_lane, max_slope_lane, TOP_LANE_Y_POS, YMAX)
+    #return line_img
+    #import pdb; pdb.set_trace()
     return line_img
 
 # Python 3 has support for cool math symbols.
@@ -118,3 +131,14 @@ def weighted_img(img, initial_img, α=0.8, β=1., λ=0.):
     NOTE: initial_img and img must be the same shape!
     """
     return cv2.addWeighted(initial_img, α, img, β, λ)
+
+
+######## MAYBE OUTSOURCE THIS LATER
+
+def remove_lines(lines: Sequence[StraightLine], min_slope, max_slope) -> Sequence[StraightLine]:
+    """Returns: lines that fulfill specified slope range, the rest is removed from the list"""
+
+
+    leftover_lines = [line for line in lines if slope(line) > min_slope and slope(line) < max_slope]
+    #import pdb; pdb.set_trace()
+    return leftover_lines
