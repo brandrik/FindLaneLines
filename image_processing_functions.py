@@ -80,7 +80,7 @@ def hough_lines(img, rho, theta, threshold, min_line_len, max_line_gap) -> Seque
 
     Returns an image with hough lines drawn.
     """
-    lines = cv2.HoughLinesP(img, rho, theta, threshold, np.array([]), minLineLength=min_line_len, maxLineGap=max_line_gap)
+    lines = cv2.HoughLinesP(img, rho, theta, threshold, np.array([]), min_line_len, max_line_gap)
 
     # use tuples for line:  [[x1,y1,x2,y2]]
     lines = [StraightLine(*line[0]) for line in lines]

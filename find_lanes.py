@@ -12,7 +12,8 @@ from IPython.display import HTML
 
 from typing import Sequence
 
-from image_processing_functions import grayscale, region_of_interest, gaussian_blur, canny, hough_lines, weighted_img, draw_lines
+from image_processing_functions import grayscale, region_of_interest, gaussian_blur, canny, \
+    hough_lines, weighted_img, draw_lines, remove_lines, average_straight_lines, extrapolate_line
 from math_functions import StraightLine, slope, extrapolate_line, line_interception_y_axis
 #import pdb
 
@@ -26,31 +27,42 @@ print('This image is:', type(image), 'with dimensions:', image.shape)
 plt.imshow(image)  # if you wanted to show a single color channel image called 'gray', 
 # for example, call as plt.imshow(gray, cmap='gray')
 
+
+
 # 0 PARAMETERS
 
+
 ## Masking: vertices
-IMSHAPE = image.shape # (y,x, num channels ) e.g. (540, 960, 3)  imshape[0] -> y, imshape[1] -> x
+# Run determine_params to set image dimension dependent parameters
 
-CENTER_X = int(IMSHAPE[1] / 2)   # half of x scale in the image
-CENTER_Y = int(IMSHAPE[0] / 2)   # half of y scale in the image
+IMSHAPE = np.array([0,0,0])
 
-TOP_LANE_Y_POS        = int(0.6 * IMSHAPE[0])   # [pixel], top of lane y position  0.58
-OFFSET_X              = int(0.09 * IMSHAPE[1])   # [pixel], defines offset from the center of top of the   0.09
-                                                 # lane to the right a. left to define masking polygon
-BOTTOM_RIGHT_OFFSET_X = int(0.04 * IMSHAPE[1])   # [pixel], defines offset from the center of top of the
-                                                 # lane to the right a. left to define masking polygon
+TOP_LANE_Y_POS        = int(0)   # [pixel], top of lane y position  0.58
 
-BOTTOM_LEFT_X_POS     = int(0.1 * IMSHAPE[1])    # [pixel], bottom left x position of masking polygon
+#CENTER_X = int(0)   # half of x scale in the image
+#CENTER_Y = int(0)   # half of y scale in the image
+
+
+#OFFSET_X              = int(0)   # [pixel], defines offset from the center of top of the   0.09
+                                                 ## lane to the right a. left to define masking polygon
+#BOTTOM_RIGHT_OFFSET_X = int(0)   # [pixel], defines offset from the center of top of the
+                                                 ## lane to the right a. left to define masking polygon
+
+#BOTTOM_LEFT_X_POS     = int(0)    # [pixel], bottom left x position of masking polygon
+
+VERTICES = np.array([])
 
 LINE_THICKNESS        = 10                       # thickness of line to mask edges introduced by masking
 
 MIN_SLOPE_LANE        = 0.4                      # compare abs. value of slopes of lines to filter non-lane lines
 
-## initializing points for masking polygon
-(X0, Y0) = (0,0)   # left bottom point
-(X1, Y1) = (0,0)   # left top point
-(X2, Y2) = (0,0)   # right top point
-(X3, Y3) = (0,0)   # right bottom point
+### initializing points for masking polygon
+#(X0, Y0) = (0,0)   # left bottom point
+#(X1, Y1) = (0,0)   # left top point
+#(X2, Y2) = (0,0)   # right top point
+#(X3, Y3) = (0,0)   # right bottom point
+
+
 
 
 ## Smoothing
@@ -66,7 +78,7 @@ MAX_LINE_GAP    = 10    # unitless, upper threshold of gradient intensity
 
 ## Hough Transform
 ## divide hough space into grid with distance 'steps' rho and angle steps 'theta'
-RHO = 2                # [pixel], delta of euclidian distance from origin to the line in [pixel]
+RHO = 1                # [pixel], delta of euclidian distance from origin to the line in [pixel]
 THETA = np.pi / 180    # [rad], pi/180 = 1 rad
 
 ## HOUGH Threshold: minimum vote it should get for it to be considered as a line.
@@ -81,6 +93,29 @@ HOUGH_ACCUMULATION_THR = 20    # number of votes in accumulation matrix,
 λ = 0
 
 
+BLACK = [0, 0, 0]
+
+
+def determine_params(image: np.ndarray):
+    """Sets parameters according to image dimensions"""
+    
+    imshape  = image.shape # (y,x, num channels ) e.g. (540, 960, 3)  imshape[0] -> y, imshape[1] -> x
+    
+    center_x = int(imshape[1] / 2)   # half of x scale in the image
+    center_y = int(imshape[0] / 2)   # half of y scale in the image
+    
+    top_lane_y_pos        = int(0.6 * imshape[0])   # [pixel], top of lane y position  0.58
+    offset_x              = int(0.09 * imshape[1])   # [pixel], defines offset from the center of top of the   0.09
+                                # lane to the right a. left to define masking polygon
+    bottom_right_offset_x = int(0.04 * imshape[1])   # [pixel], defines offset from the center of top of the
+                                # lane to the right a. left to define masking polygon
+    
+    bottom_left_x_pos     = int(0.1 * imshape[1])    # [pixel], bottom left x position of masking polygon  
+    
+    
+    return (imshape, center_x, center_y, top_lane_y_pos, offset_x, bottom_right_offset_x, bottom_left_x_pos)
+    
+
 
 # 1 FUNCTIONS #### 
 
@@ -88,7 +123,7 @@ def process_image(image: np.ndarray) -> np.ndarray:
     # NOTE: The output you return should be a color image (3 channel) for processing video below
     # TODO: put your pipeline here,
     # you should return the final output (image where lines are drawn on lanes)
-    #pdb.set_trace()
+    
     # PIPELINE
         ## 1) GRAY SCALE
         ## 2) MASKING
@@ -100,45 +135,40 @@ def process_image(image: np.ndarray) -> np.ndarray:
     # 1 CONVERT TO GRAY SCALE 
     gray = grayscale(image)  # returns one color channel, needs to be set to gray when using imshow()
     
-    import pdb; pdb.set_trace()
     # 2 MASKING - REGION OF INTEREST
     ## reduce the number of pixels to be processed, to lower reduce computational effort for e.g gaussian blur
     ## compute vertices for triangle masking
     ## This time we are defining a four sided polygon to mask
-
-    vertices = compute_masking_vertices(image)
-    masked = region_of_interest(gray, vertices)
+    masked = region_of_interest(gray, VERTICES)
     
     
-    # 3 REMOVING NOISE WITH GAUSSIAN-BLUR
-    ## reduce noise in the gray-scale image to improve later edge detection
-    ## This is an extra smoothing applied prior to the one embedded in the canny function
-    blurred = gaussian_blur(masked, GAUSSIAN_BLUR_KERNEL_SIZE) # use kernel with size 5
+    ## 3 REMOVING NOISE WITH GAUSSIAN-BLUR
+    ### reduce noise in the gray-scale image to improve later edge detection
+    ### This is an extra smoothing applied prior to the one embedded in the canny function
+    blurred = gaussian_blur(masked, GAUSSIAN_BLUR_KERNEL_SIZE) 
     
     
     # 4 CANNY EDGE DETECTION
     edges = canny(blurred, LOW_CANNY_GRAD_INTENS_THR, HIGHER_CANNY_GRAD_INTENS_THR)  # image w/ edges emphasized
 
     
-    ## overpaint edge introduced by prior masking
-    cv2.line(edges,(X0,Y0),(X1,Y1),(0),LINE_THICKNESS)
-    cv2.line(edges,(X1,Y1),(X2,Y2),(0),LINE_THICKNESS)
-    cv2.line(edges,(X2,Y2),(X3,Y3),(0),LINE_THICKNESS)
-    
+    ## overpaint edge introduced by prior masking, so they are not reccoginzed by hough_line method
+  
+    masking_lines = vertices_to_lines(VERTICES)
+    draw_lines(edges, masking_lines, BLACK, LINE_THICKNESS)
 
     # 5 HOUGH TRANSFORMATION FOR LINE DETECTION
         # lines not representing a lane are removed from the result
     lines = hough_lines(edges, RHO, THETA, HOUGH_ACCUMULATION_THR, MIN_LINE_LEN, MAX_LINE_GAP)  # Sequence[StraightLine]
-
-    
    
-    lines = process_lines(lines, MIN_SLOPE_LANE, TOP_LANE_Y_POS, IMSHAPE[0]) # remove non-lane lines
+    lines = process_lines(lines, MIN_SLOPE_LANE, TOP_LANE_Y_POS, IMSHAPE[0]) # remove non-lane lines 
+    line_img = np.zeros((IMSHAPE[0], IMSHAPE[1], 3), dtype=np.uint8)
+    draw_lines(line_img, lines) # draw detected lanes into empty image
     
-    line_img = np.zeros((img.shape[0], img.shape[1], 3), dtype=np.uint8)
-    draw_lines(line_img, lines)
-
+    
+    
     # 6 OVERLAY IMAGES: overlay line image on top of the irginal one.
-    weighted = weighted_img(lines, image, α, β, λ)
+    weighted = weighted_img(line_img, image, α, β, λ)
     
     
     #return edges, masked_edges, weighted
@@ -146,18 +176,34 @@ def process_image(image: np.ndarray) -> np.ndarray:
 
 
 
-def compute_masking_vertices(image: np.ndarray) -> np.array:
+def compute_vertices(imshape: np.ndarray, center_x, center_y, top_lane_y_pos, offset_x, bootom_right_offset_x, bottom_left_x_pos) -> np.ndarray:
 
     """ Computes vertices for masking
     Returns: vertices as np.array """
 
-    (X0, Y0) = (BOTTOM_LEFT_X_POS, IMSHAPE[0])                    # left bottom point
-    (X1, Y1) = (CENTER_X - OFFSET_X, TOP_LANE_Y_POS)              # left top point
-    (X2, Y2) = (CENTER_X + OFFSET_X, TOP_LANE_Y_POS)              # right top point
-    (X3, Y3) = (IMSHAPE[1] - BOTTOM_RIGHT_OFFSET_X, IMSHAPE[0])   # right bottom point
+    (X0, Y0) = (bottom_left_x_pos, imshape[0])                    # left bottom point
+    (X1, Y1) = (center_x - offset_x, top_lane_y_pos)              # left top point
+    (X2, Y2) = (center_x + offset_x, top_lane_y_pos)              # right top point
+    (X3, Y3) = (imshape[1] - bootom_right_offset_x, imshape[0])   # right bottom point
     
     vertices = np.array([[(X0, Y0), (X1, Y1), (X2, Y2), (X3, Y3)]], dtype=np.int32)
+
+
     return vertices
+
+def vertices_to_lines(vertices: np.ndarray) -> Sequence[StraightLine]:
+    """ INPUT:   Coordinate pairs in array: [X0, Y0, X1, Y1], [...], []
+        RETURNS: lines: line(X0= , Y0=, X1=, X2= ) """
+    
+    i = 0
+    max_index = vertices.shape[1] - 1
+    lines = [[vertices[0][0][0], vertices[0][0][1], vertices[0][max_index][0], vertices[0][max_index][1]]] # append last line
+    while i < (vertices.shape[1]-1):     # number of points
+        lines = np.append(lines, [[vertices[0][i][0], vertices[0][i][1], vertices[0][i+1][0], vertices[0][i+1][1]]], axis=0)
+        i = i + 1
+    
+    lines = [StraightLine(*line) for line in lines]
+    return lines
 
 def process_lines(lines: Sequence[StraightLine], min_slope: int, ymin: int, ymax: int) -> Sequence[StraightLine]:
     """Returns: Sequence of lines fulfilling min slop condition
@@ -173,19 +219,44 @@ def process_lines(lines: Sequence[StraightLine], min_slope: int, ymin: int, ymax
         # filter by slope: remove horizontal lines, when filtering in left and right lane group
 
     negative_slope_lines = remove_lines(lines, -1, -min_slope)
-    negative_slope_lines = remove_lines(lines, min_slope, 1)
+    positive_slope_lines = remove_lines(lines, min_slope, 1)
 
     # 2 AVERAGE the position of the lines
     negative_slope_line = average_straight_lines(negative_slope_lines)
     positive_slope_line = average_straight_lines(positive_slope_lines)
 
     # 3 EXRTAPOLATE
-    extrapolated_neg_slope_line = extrapolate_line(negative_slope_line, ymin, ymax)
+     
+    # only extrapolate if there is a line left in the lists
+    extrapolated_neg_slope_line = extrapolate_line(negative_slope_line, ymin, ymax) 
+
     extrapolated_pos_slope_line = extrapolate_line(positive_slope_line, ymin, ymax)
 
+    lanes = [extrapolated_neg_slope_line] + [extrapolated_pos_slope_line] # combine to one list
 
-    lines = [extrapolated_neg_slope_line] + [extrapolated_pos_slope_line] # combine to one list
+    return (list(filter(None.__ne__, lanes)))
 
-    return lines
 
+
+def preprocess(image: np.ndarray):
+    (imshape, center_x, center_y, top_lane_y_pos, offset_x, bottom_right_offset_x, bottom_left_x_pos) = determine_params(image)
+    vertices = compute_vertices(imshape, center_x, center_y, top_lane_y_pos, offset_x, bottom_right_offset_x, bottom_left_x_pos)
+    
+    return(imshape, top_lane_y_pos, vertices)
+
+
+plt.figure(0)
+challenge_output = 'test_videos_output/challenge.mp4'
+## To speed up the testing process you may want to try your pipeline on a shorter subclip of the video
+## To do so add .subclip(start_second,end_second) to the end of the line below
+## Where start_second and end_second are integer values representing the start and end of the subclip
+## You may also uncomment the following line for a subclip of the first 5 seconds
+##clip3 = VideoFileClip('test_videos/challenge.mp4').subclip(0,5)
+clip3 = VideoFileClip('test_videos/challenge.mp4').subclip(4.5,5)
+
+image2 = clip3.make_frame(1)
+(IMSHAPE, TOP_LANE_Y_POS, VERTICES) = preprocess(image2)
+                                                     
+challenge_clip = clip3.fl_image(process_image)
+challenge_clip.write_videofile(challenge_output, audio=False)
 
