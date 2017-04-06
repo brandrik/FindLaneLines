@@ -62,7 +62,7 @@ def average_straight_lines(lines: Sequence[StraightLine]) -> StraightLine:
     average_x2 = int(sum(line.x2 for line in lines)/num_lines)
     average_y1 = int(sum(line.y1 for line in lines)/num_lines)
     average_y2 = int(sum(line.y2 for line in lines)/num_lines)
-    #import pdb; pdb.set_trace()
+  
     average_line = StraightLine(*[average_x1, average_y1, average_x2, average_y2])
 
     return average_line
