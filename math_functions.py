@@ -67,4 +67,3 @@ def average_straight_lines(lines: Sequence[StraightLine]) -> StraightLine:
 
     return average_line
 
-#def filter

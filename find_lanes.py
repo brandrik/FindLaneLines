@@ -15,17 +15,6 @@ from typing import Sequence
 from image_processing_functions import grayscale, region_of_interest, gaussian_blur, canny, \
     hough_lines, weighted_img, draw_lines, remove_lines, average_straight_lines, extrapolate_line
 from math_functions import StraightLine, slope, extrapolate_line, line_interception_y_axis
-#import pdb
-
-
-
-#reading in an image
-image = mpimg.imread('test_images/solidWhiteRight.jpg')
-
-#printing out some stats and plotting
-print('This image is:', type(image), 'with dimensions:', image.shape)
-plt.imshow(image)  # if you wanted to show a single color channel image called 'gray', 
-# for example, call as plt.imshow(gray, cmap='gray')
 
 
 
@@ -39,37 +28,18 @@ IMSHAPE = np.array([0,0,0])
 
 TOP_LANE_Y_POS        = int(0)   # [pixel], top of lane y position  0.58
 
-#CENTER_X = int(0)   # half of x scale in the image
-#CENTER_Y = int(0)   # half of y scale in the image
-
-
-#OFFSET_X              = int(0)   # [pixel], defines offset from the center of top of the   0.09
-                                                 ## lane to the right a. left to define masking polygon
-#BOTTOM_RIGHT_OFFSET_X = int(0)   # [pixel], defines offset from the center of top of the
-                                                 ## lane to the right a. left to define masking polygon
-
-#BOTTOM_LEFT_X_POS     = int(0)    # [pixel], bottom left x position of masking polygon
-
 VERTICES = np.array([])
 
 LINE_THICKNESS        = 10                       # thickness of line to mask edges introduced by masking
 
 MIN_SLOPE_LANE        = 0.4                      # compare abs. value of slopes of lines to filter non-lane lines
 
-### initializing points for masking polygon
-#(X0, Y0) = (0,0)   # left bottom point
-#(X1, Y1) = (0,0)   # left top point
-#(X2, Y2) = (0,0)   # right top point
-#(X3, Y3) = (0,0)   # right bottom point
-
-
-
 
 ## Smoothing
 GAUSSIAN_BLUR_KERNEL_SIZE    = 3
 
 ## Canny: gradient intensity thresholds
-LOW_CANNY_GRAD_INTENS_THR    = 200
+LOW_CANNY_GRAD_INTENS_THR    = 220
 HIGHER_CANNY_GRAD_INTENS_THR = 290
 
 
@@ -78,13 +48,13 @@ MAX_LINE_GAP    = 10    # unitless, upper threshold of gradient intensity
 
 ## Hough Transform
 ## divide hough space into grid with distance 'steps' rho and angle steps 'theta'
-RHO = 1                # [pixel], delta of euclidian distance from origin to the line in [pixel]
-THETA = np.pi / 180    # [rad], pi/180 = 1 rad
+RHO = 2               # [pixel], delta of euclidian distance from origin to the line in [pixel]
+THETA = np.pi / 360    # [rad], pi/180 = 1 rad
 
 ## HOUGH Threshold: minimum vote it should get for it to be considered as a line.
 ## Number of votes depend upon number of points on the line.
 ## So it represents the minimum length of line that should be detected.
-HOUGH_ACCUMULATION_THR = 20    # number of votes in accumulation matrix,
+HOUGH_ACCUMULATION_THR = 10    # number of votes in accumulation matrix,
                                # this is also the lower bound for minimal line length
 
 ## Overlay line image onto original: weights
@@ -135,11 +105,14 @@ def process_image(image: np.ndarray) -> np.ndarray:
     # 1 CONVERT TO GRAY SCALE 
     gray = grayscale(image)  # returns one color channel, needs to be set to gray when using imshow()
     
+    # optional thresholding
+    ret,thresh=cv2.threshold(gray,200,255,cv2.THRESH_BINARY)
+    
     # 2 MASKING - REGION OF INTEREST
     ## reduce the number of pixels to be processed, to lower reduce computational effort for e.g gaussian blur
     ## compute vertices for triangle masking
     ## This time we are defining a four sided polygon to mask
-    masked = region_of_interest(gray, VERTICES)
+    masked = region_of_interest(thresh, VERTICES)
     
     
     ## 3 REMOVING NOISE WITH GAUSSIAN-BLUR
@@ -252,7 +225,7 @@ challenge_output = 'test_videos_output/challenge.mp4'
 ## Where start_second and end_second are integer values representing the start and end of the subclip
 ## You may also uncomment the following line for a subclip of the first 5 seconds
 ##clip3 = VideoFileClip('test_videos/challenge.mp4').subclip(0,5)
-clip3 = VideoFileClip('test_videos/challenge.mp4').subclip(4.5,5)
+clip3 = VideoFileClip('test_videos/challenge.mp4').subclip(4.25, 10)
 
 image2 = clip3.make_frame(1)
 (IMSHAPE, TOP_LANE_Y_POS, VERTICES) = preprocess(image2)
