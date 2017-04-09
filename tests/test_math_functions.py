@@ -1,11 +1,18 @@
 """ Tests for math_functions.py"""
 # also import from parant directory
+from inspect import getsourcefile
+import os.path
 import sys
-from pathlib import Path
-sys.path.append(str(Path('.').absolute().parent))
 
 
-from math_functions import StraightLine, slope, line_interception_y_axis, average_straight_lines, extrapolate_line
+# enable import from modules lying in parent directory
+current_path = os.path.abspath(getsourcefile(lambda:0))
+current_dir = os.path.dirname(current_path)
+parent_dir = current_dir[:current_dir.rfind(os.path.sep)]
+
+sys.path.insert(0, parent_dir)
+
+from lib.math_functions import StraightLine, slope, line_interception_y_axis, average_straight_lines, extrapolate_line
 
 
 def test_slope():
@@ -36,9 +43,4 @@ def test_average_straight_lines():
     assert expected_average == average_straight_lines([test_line_one, test_line_two])
     
 
-
-test_slope()
-test_line_interception_y_axis()
-test_extrapolate_line()
-test_average_straight_lines()  
 
