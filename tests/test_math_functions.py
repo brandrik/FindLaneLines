@@ -1,5 +1,6 @@
 """ Tests for math_functions.py"""
 # also import from parant directory
+import pytest
 from inspect import getsourcefile
 import os.path
 import sys
@@ -42,5 +43,4 @@ def test_average_straight_lines():
     expected_average = StraightLine(2, 2, 8, 8)
     assert expected_average == average_straight_lines([test_line_one, test_line_two])
     
-
 

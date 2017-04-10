@@ -6,7 +6,20 @@ import cv2
 import matplotlib.image as mpimg
 import numpy as np
 import os
-from math_functions import StraightLine, Sequence, slope, average_straight_lines, extrapolate_line
+
+from inspect import getsourcefile
+import os.path
+import sys
+
+
+# enable import from modules lying in parent directory
+current_path = os.path.abspath(getsourcefile(lambda:0))
+current_dir = os.path.dirname(current_path)
+parent_dir = current_dir[:current_dir.rfind(os.path.sep)]
+
+sys.path.insert(0, parent_dir)
+
+from . math_functions import StraightLine, Sequence, slope, average_straight_lines, extrapolate_line
 
 
 def grayscale(img: np.ndarray):

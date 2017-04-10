@@ -7,14 +7,16 @@ import matplotlib.image as mpimg
 import numpy as np
 import cv2
 import os
+import argparse
 from moviepy.editor import VideoFileClip
 from IPython.display import HTML
 
 from typing import Sequence
 
-from image_processing_functions import grayscale, region_of_interest, gaussian_blur, canny, \
+from lib.math_functions import StraightLine, slope, extrapolate_line, line_interception_y_axis
+from lib.image_processing_functions import grayscale, region_of_interest, gaussian_blur, canny, \
     hough_lines, weighted_img, draw_lines, remove_lines, average_straight_lines, extrapolate_line
-from math_functions import StraightLine, slope, extrapolate_line, line_interception_y_axis
+
 
 
 
@@ -65,6 +67,15 @@ HOUGH_ACCUMULATION_THR = 10    # number of votes in accumulation matrix,
 
 BLACK = [0, 0, 0]
 
+
+def main():
+    """business logic for when running this module as the primary one"""
+    parser = argparse.ArgumentParser(description="Mark lane lines on an image of a road.")
+    parser.add_argument("src_path", help="Path of source image to have lane lines marked.")
+    parser.add_argument("dest_path", help="Path of image with marked lane lines.")
+    args = parser.parse_args()
+    #annotate_lanes_file(args.src_path, args.dest_path)
+    #print("Annotated file:", args.src_path, "and left it at:", args.dest_path, "Drive safe!")    
 
 def determine_params(image: np.ndarray):
     """Sets parameters according to image dimensions"""
@@ -218,18 +229,6 @@ def preprocess(image: np.ndarray):
     return(imshape, top_lane_y_pos, vertices)
 
 
-plt.figure(0)
-challenge_output = 'test_videos_output/challenge.mp4'
-## To speed up the testing process you may want to try your pipeline on a shorter subclip of the video
-## To do so add .subclip(start_second,end_second) to the end of the line below
-## Where start_second and end_second are integer values representing the start and end of the subclip
-## You may also uncomment the following line for a subclip of the first 5 seconds
-##clip3 = VideoFileClip('test_videos/challenge.mp4').subclip(0,5)
-clip3 = VideoFileClip('test_videos/challenge.mp4').subclip(4.25, 10)
-
-image2 = clip3.make_frame(1)
-(IMSHAPE, TOP_LANE_Y_POS, VERTICES) = preprocess(image2)
-                                                     
-challenge_clip = clip3.fl_image(process_image)
-challenge_clip.write_videofile(challenge_output, audio=False)
-
+# only run the code below, if this script is the entry-point
+if __name__ == '__main__':
+    main()      
