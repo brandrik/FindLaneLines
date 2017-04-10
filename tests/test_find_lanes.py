@@ -62,7 +62,7 @@ def test_process_all_test_images(paths_images: Sequence[str], paths_images_outpu
     i = 0
     output_paths = paths_images_output
     for path in paths_images:
-        assert find_lanes_in_images(path, output_paths[i])  == expected_file_saved
+        assert find_lanes_in_images(path, output_paths[i]) == expected_file_saved
         i = i + 1 
         
         
@@ -72,7 +72,6 @@ def test_process_all_test_images(paths_images: Sequence[str], paths_images_outpu
 def test_process_all_test_videos(paths_videos: Sequence[str], paths_videos_output: Sequence[str]) \
     -> Sequence[np.ndarray]:
     expected_file_saved = True
-
     i = 0
     output_paths = paths_videos_output
     for path in paths_videos:

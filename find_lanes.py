@@ -140,13 +140,13 @@ def process_image(image: np.ndarray) -> np.ndarray:
     gray = grayscale(image)  # returns one color channel, needs to be set to gray when using imshow()
     
     # optional thresholding
-    ret,thresh=cv2.threshold(gray,200,255,cv2.THRESH_BINARY)
+    #ret,thresh=cv2.threshold(gray,200,255,cv2.THRESH_BINARY)
     
     # 2 MASKING - REGION OF INTEREST
     ## reduce the number of pixels to be processed, to lower reduce computational effort for e.g gaussian blur
     ## compute vertices for triangle masking
     ## This time we are defining a four sided polygon to mask
-    masked = region_of_interest(thresh, VERTICES)
+    masked = region_of_interest(gray, VERTICES)
     
     
     ## 3 REMOVING NOISE WITH GAUSSIAN-BLUR
@@ -264,7 +264,10 @@ def save_image(dest_file_path: str, image: np.ndarray):
 
 def save_videos(dest_file_path: str, video: VideoFileClip) -> bool:
     
+    dir = os.path.split(dest_file_path)[0]
     pdb.set_trace()
+    if not os.path.exists(dir):
+        os.makedirs(dir)    
     saved = video.write_videofile(dest_file_path)
     return saved
 
