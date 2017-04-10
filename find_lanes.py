@@ -13,6 +13,8 @@ from IPython.display import HTML
 
 from typing import Sequence
 
+#import pdb
+
 from lib.math_functions import StraightLine, slope, extrapolate_line, line_interception_y_axis
 from lib.image_processing_functions import grayscale, region_of_interest, gaussian_blur, canny, \
     hough_lines, weighted_img, draw_lines, remove_lines, average_straight_lines, extrapolate_line
@@ -74,8 +76,18 @@ def main():
     parser.add_argument("src_path", help="Path of source image to have lane lines marked.")
     parser.add_argument("dest_path", help="Path of image with marked lane lines.")
     args = parser.parse_args()
-    #annotate_lanes_file(args.src_path, args.dest_path)
-    #print("Annotated file:", args.src_path, "and left it at:", args.dest_path, "Drive safe!")    
+    find_lanes(args.src_path, args.dest_path)
+    print("Added lane markings to image:", args.src_path, "and saved the resulting image to:", args.dest_path, "Drive safe!")    
+
+
+def find_lanes(source_file_path: str, dest_file_path: str) -> None:
+    """Mark lane lines in given road image"""
+    #reading in an image
+    image = mpimg.imread(source_file_path)
+    marked = process_image(image)
+    save_image(dest_file_path, marked)
+    print("Image with marked lanes was written to: ", dest_file_path)
+
 
 def determine_params(image: np.ndarray):
     """Sets parameters according to image dimensions"""
@@ -113,6 +125,9 @@ def process_image(image: np.ndarray) -> np.ndarray:
         ## 5) HOUGHT LINE DETECTION (also removing non-lane lines)
         ## 6) Overlay detected lanes on original image
     
+    
+    IMSHAPE, TOP_LANE_Y_POS, VERTICES = preprocess(image)
+
     # 1 CONVERT TO GRAY SCALE 
     gray = grayscale(image)  # returns one color channel, needs to be set to gray when using imshow()
     
@@ -140,6 +155,7 @@ def process_image(image: np.ndarray) -> np.ndarray:
   
     masking_lines = vertices_to_lines(VERTICES)
     draw_lines(edges, masking_lines, BLACK, LINE_THICKNESS)
+    
 
     # 5 HOUGH TRANSFORMATION FOR LINE DETECTION
         # lines not representing a lane are removed from the result
@@ -148,7 +164,6 @@ def process_image(image: np.ndarray) -> np.ndarray:
     lines = process_lines(lines, MIN_SLOPE_LANE, TOP_LANE_Y_POS, IMSHAPE[0]) # remove non-lane lines 
     line_img = np.zeros((IMSHAPE[0], IMSHAPE[1], 3), dtype=np.uint8)
     draw_lines(line_img, lines) # draw detected lanes into empty image
-    
     
     
     # 6 OVERLAY IMAGES: overlay line image on top of the irginal one.
@@ -228,6 +243,16 @@ def preprocess(image: np.ndarray):
     
     return(imshape, top_lane_y_pos, vertices)
 
+
+def save_image(dest_file_path: str, image: np.ndarray):
+    """Returns: True if file was written, false if not"""
+    
+    dir = os.path.split(dest_file_path)[0]
+    if not os.path.exists(dir):
+        os.makedirs(dir)    
+    img = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+    saved = cv2.imwrite(dest_file_path, img)
+    return saved
 
 # only run the code below, if this script is the entry-point
 if __name__ == '__main__':
