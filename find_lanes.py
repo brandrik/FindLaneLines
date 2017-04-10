@@ -80,13 +80,14 @@ def main():
     print("Added lane markings to image:", args.src_path, "and saved the resulting image to:", args.dest_path, "Drive safe!")    
 
 
-def find_lanes(source_file_path: str, dest_file_path: str) -> None:
+def find_lanes(source_file_path: str, dest_file_path: str) -> bool:
     """Mark lane lines in given road image"""
     #reading in an image
     image = mpimg.imread(source_file_path)
     marked = process_image(image)
-    save_image(dest_file_path, marked)
+    file_saved = save_image(dest_file_path, marked)
     print("Image with marked lanes was written to: ", dest_file_path)
+    return file_saved
 
 
 def determine_params(image: np.ndarray):

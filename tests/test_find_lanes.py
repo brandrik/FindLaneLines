@@ -38,11 +38,13 @@ def paths_images_output(paths_images: Sequence[str]) -> Sequence[str]:
 
 def test_process_all_test_images(paths_images: Sequence[str], paths_images_output: Sequence[str]) \
     -> Sequence[np.ndarray]:
+    
+    expected_file_saved = True
 
     i = 0
     output_paths = paths_images_output
     for path in paths_images:
-        find_lanes(path, output_paths[i])
+        assert find_lanes(path, output_paths[i])  == expected_file_saved
         i = i + 1 
         
         
