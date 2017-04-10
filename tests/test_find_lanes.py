@@ -5,6 +5,7 @@ import numpy as np
 
 from pytest import fixture
 import pdb
+from moviepy.editor import VideoFileClip
 
 # enable import from modules lying in parent directory
 from inspect import getsourcefile
@@ -36,6 +37,23 @@ def paths_images_output(paths_images: Sequence[str]) -> Sequence[str]:
     output_filenames =  [os.path.join(dir_output_images, filename) for filename in input_filenames]
     return output_filenames
 
+@fixture()
+def paths_videos() -> Sequence[str]:
+    dir_videos = "../test_videos"
+    filenames_videos = os.listdir(dir_videos)
+    fullpaths = [os.path.join(dir_videos, filename) for filename in filenames_videos]
+    return fullpaths
+
+@fixture
+def paths_videos_output(paths_videos: Sequence[str]) -> Sequence[str]:
+    dir_output_videos = "../test_videos_output"
+    input_filenames = [os.path.split(fullpath)[1] for fullpath in paths_videos]
+    output_filenames =  [os.path.join(dir_output_videos, filename) for filename in input_filenames]
+    return output_filenames
+
+
+
+# Does it process single images
 def test_process_all_test_images(paths_images: Sequence[str], paths_images_output: Sequence[str]) \
     -> Sequence[np.ndarray]:
     
@@ -44,11 +62,19 @@ def test_process_all_test_images(paths_images: Sequence[str], paths_images_outpu
     i = 0
     output_paths = paths_images_output
     for path in paths_images:
-        assert find_lanes(path, output_paths[i])  == expected_file_saved
+        assert find_lanes_in_images(path, output_paths[i])  == expected_file_saved
         i = i + 1 
         
         
 
 
 # Does it process videos
-   ## TODO
+def test_process_all_test_videos(paths_videos: Sequence[str], paths_videos_output: Sequence[str]) \
+    -> Sequence[np.ndarray]:
+    expected_file_saved = True
+
+    i = 0
+    output_paths = paths_videos_output
+    for path in paths_videos:
+        assert find_lanes_in_videos(path, output_paths[i])  == expected_file_saved
+        i = i + 1 

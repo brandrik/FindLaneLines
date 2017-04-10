@@ -13,7 +13,7 @@ from IPython.display import HTML
 
 from typing import Sequence
 
-#import pdb
+import pdb
 
 from lib.math_functions import StraightLine, slope, extrapolate_line, line_interception_y_axis
 from lib.image_processing_functions import grayscale, region_of_interest, gaussian_blur, canny, \
@@ -80,7 +80,7 @@ def main():
     print("Added lane markings to image:", args.src_path, "and saved the resulting image to:", args.dest_path, "Drive safe!")    
 
 
-def find_lanes(source_file_path: str, dest_file_path: str) -> bool:
+def find_lanes_in_images(source_file_path: str, dest_file_path: str) -> bool:
     """Mark lane lines in given road image"""
     #reading in an image
     image = mpimg.imread(source_file_path)
@@ -89,6 +89,13 @@ def find_lanes(source_file_path: str, dest_file_path: str) -> bool:
     print("Image with marked lanes was written to: ", dest_file_path)
     return file_saved
 
+def find_lanes_in_videos(source_file_path: str, dest_file_path: str) -> bool:
+    clip = VideoFileClip(source_file_path)
+    marked = clip.fl_image(process_image)
+    marked.write_videofile(dest_file_path, audio = False)
+    # check if file exists
+    saved = os.path.exists(dest_file_path)
+    return saved
 
 def determine_params(image: np.ndarray):
     """Sets parameters according to image dimensions"""
@@ -253,6 +260,12 @@ def save_image(dest_file_path: str, image: np.ndarray):
         os.makedirs(dir)    
     img = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
     saved = cv2.imwrite(dest_file_path, img)
+    return saved
+
+def save_videos(dest_file_path: str, video: VideoFileClip) -> bool:
+    
+    pdb.set_trace()
+    saved = video.write_videofile(dest_file_path)
     return saved
 
 # only run the code below, if this script is the entry-point
