@@ -1,7 +1,6 @@
 # main function
 
 # IMPORT
-#importing some useful packages
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 import numpy as np
@@ -76,8 +75,8 @@ def main():
     parser.add_argument("src_path", help="Path of source image to have lane lines marked.")
     parser.add_argument("dest_path", help="Path of image with marked lane lines.")
     args = parser.parse_args()
-    find_lanes(args.src_path, args.dest_path)
-    print("Added lane markings to image:", args.src_path, "and saved the resulting image to:", args.dest_path, "Drive safe!")    
+    find_lanes_in_images(args.src_path, args.dest_path)
+    print("Added lane markings to image:", args.src_path, "and saved the resulting image to:", args.dest_path)    
 
 
 def find_lanes_in_images(source_file_path: str, dest_file_path: str) -> bool:
@@ -105,7 +104,7 @@ def determine_params(image: np.ndarray):
     center_x = int(imshape[1] / 2)   # half of x scale in the image
     center_y = int(imshape[0] / 2)   # half of y scale in the image
     
-    top_lane_y_pos        = int(0.6 * imshape[0])   # [pixel], top of lane y position  0.58
+    top_lane_y_pos        = int(0.6 * imshape[0])    # [pixel], top of lane y position  0.58
     offset_x              = int(0.09 * imshape[1])   # [pixel], defines offset from the center of top of the   0.09
                                 # lane to the right a. left to define masking polygon
     bottom_right_offset_x = int(0.04 * imshape[1])   # [pixel], defines offset from the center of top of the
@@ -134,7 +133,7 @@ def process_image(image: np.ndarray) -> np.ndarray:
         ## 6) Overlay detected lanes on original image
     
     
-    IMSHAPE, TOP_LANE_Y_POS, VERTICES = preprocess(image)
+    (IMSHAPE, TOP_LANE_Y_POS, VERTICES, SAVE_IMAGES) = preprocess(image)
 
     # 1 CONVERT TO GRAY SCALE 
     gray = grayscale(image)  # returns one color channel, needs to be set to gray when using imshow()
@@ -156,8 +155,8 @@ def process_image(image: np.ndarray) -> np.ndarray:
     
     
     # 4 CANNY EDGE DETECTION
-    edges = canny(blurred, LOW_CANNY_GRAD_INTENS_THR, HIGHER_CANNY_GRAD_INTENS_THR)  # image w/ edges emphasized
-
+    edges_without_lines_marked = canny(blurred, LOW_CANNY_GRAD_INTENS_THR, HIGHER_CANNY_GRAD_INTENS_THR)  # image w/ edges emphasized
+    edges = edges_without_lines_marked.copy()
     
     ## overpaint edge introduced by prior masking, so they are not reccoginzed by hough_line method
   
@@ -177,6 +176,9 @@ def process_image(image: np.ndarray) -> np.ndarray:
     # 6 OVERLAY IMAGES: overlay line image on top of the irginal one.
     weighted = weighted_img(line_img, image, α, β, λ)
     
+    if SAVE_IMAGES == True:
+        save_images_batch(["gray", "masked", "blurred", "edges_without_lines_marked", "edges", "line_img", "weighted"], \
+                          [gray, masked, blurred, edges_without_lines_marked, edges, line_img, weighted])    
     
     #return edges, masked_edges, weighted
     return weighted
@@ -248,8 +250,8 @@ def process_lines(lines: Sequence[StraightLine], min_slope: int, ymin: int, ymax
 def preprocess(image: np.ndarray):
     (imshape, center_x, center_y, top_lane_y_pos, offset_x, bottom_right_offset_x, bottom_left_x_pos) = determine_params(image)
     vertices = compute_vertices(imshape, center_x, center_y, top_lane_y_pos, offset_x, bottom_right_offset_x, bottom_left_x_pos)
-    
-    return(imshape, top_lane_y_pos, vertices)
+    save_images = True # change to true for saving pipeline images
+    return(imshape, top_lane_y_pos, vertices, save_images)
 
 
 def save_image(dest_file_path: str, image: np.ndarray):
@@ -257,10 +259,26 @@ def save_image(dest_file_path: str, image: np.ndarray):
     
     dir = os.path.split(dest_file_path)[0]
     if not os.path.exists(dir):
-        os.makedirs(dir)    
-    img = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        os.makedirs(dir)     
+    
+    # convert color space to RGB space 
+    if len(image.shape) == 3: # for color images
+        img = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+    else:  # for single channel (grayscale images)
+        img = cv2.cvtColor(image, cv2.COLOR_GRAY2RGB)
+        
     saved = cv2.imwrite(dest_file_path, img)
     return saved
+
+def save_images_batch(names, images):
+    
+    #names = np.array(["gray", "masked", "blurred", "edges", "edges_with_marking", "marked"])
+    dest_dir = "./"
+    extension = ".jpg"
+    i = 0
+    for image in images:
+        save_image(os.path.join(dest_dir, names[i] + extension), image)
+        i = i + 1
 
 def save_videos(dest_file_path: str, video: VideoFileClip) -> bool:
     

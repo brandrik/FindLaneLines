@@ -21,6 +21,8 @@ sys.path.insert(0, parent_dir)
 
 from find_lanes import *
 
+# CALL THIS VIA PYTEST FROM INSIDE OF "tests" FOLDER!!
+
 # PATHS
 
 @fixture()
@@ -56,7 +58,6 @@ def paths_videos_output(paths_videos: Sequence[str]) -> Sequence[str]:
 # Does it process single images
 def test_process_all_test_images(paths_images: Sequence[str], paths_images_output: Sequence[str]) \
     -> Sequence[np.ndarray]:
-    
     expected_file_saved = True
 
     i = 0
@@ -65,8 +66,6 @@ def test_process_all_test_images(paths_images: Sequence[str], paths_images_outpu
         assert find_lanes_in_images(path, output_paths[i]) == expected_file_saved
         i = i + 1 
         
-        
-
 
 # Does it process videos
 def test_process_all_test_videos(paths_videos: Sequence[str], paths_videos_output: Sequence[str]) \
@@ -76,4 +75,4 @@ def test_process_all_test_videos(paths_videos: Sequence[str], paths_videos_outpu
     output_paths = paths_videos_output
     for path in paths_videos:
         assert find_lanes_in_videos(path, output_paths[i])  == expected_file_saved
-        i = i + 1 
+        i = i + 1
