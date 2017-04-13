@@ -129,8 +129,9 @@ def process_image(image: np.ndarray) -> np.ndarray:
         ## 2) MASKING
         ## 3) REMOVING NOISE USING GAUSSIAN BLUR
         ## 4) CANNY EDGE DETECTION
-        ## 5) HOUGHT LINE DETECTION (also removing non-lane lines)
-        ## 6) Overlay detected lanes on original image
+        ## 5) OVERPAINT EDGES INTRODUCED BY MASKING 
+        ## 6) HOUGHT LINE DETECTION (also removing non-lane lines)
+        ## 7) Overlay detected lanes on original image
     
     
     (IMSHAPE, TOP_LANE_Y_POS, VERTICES, SAVE_IMAGES) = preprocess(image)
@@ -158,22 +159,25 @@ def process_image(image: np.ndarray) -> np.ndarray:
     edges_without_lines_marked = canny(blurred, LOW_CANNY_GRAD_INTENS_THR, HIGHER_CANNY_GRAD_INTENS_THR)  # image w/ edges emphasized
     edges = edges_without_lines_marked.copy()
     
-    ## overpaint edge introduced by prior masking, so they are not reccoginzed by hough_line method
+    
+    # 5 OVERPAINT EDGES introduced  by prior masking, so they are not reccoginzed by hough_line method
   
     masking_lines = vertices_to_lines(VERTICES)
     draw_lines(edges, masking_lines, BLACK, LINE_THICKNESS)
     
 
-    # 5 HOUGH TRANSFORMATION FOR LINE DETECTION
+    # 6 HOUGH TRANSFORMATION FOR LINE DETECTION
         # lines not representing a lane are removed from the result
     lines = hough_lines(edges, RHO, THETA, HOUGH_ACCUMULATION_THR, MIN_LINE_LEN, MAX_LINE_GAP)  # Sequence[StraightLine]
    
     lines = process_lines(lines, MIN_SLOPE_LANE, TOP_LANE_Y_POS, IMSHAPE[0]) # remove non-lane lines 
+    
+    
     line_img = np.zeros((IMSHAPE[0], IMSHAPE[1], 3), dtype=np.uint8)
     draw_lines(line_img, lines) # draw detected lanes into empty image
     
     
-    # 6 OVERLAY IMAGES: overlay line image on top of the irginal one.
+    # 7 OVERLAY IMAGES: overlay line image on top of the irginal one.
     weighted = weighted_img(line_img, image, α, β, λ)
     
     if SAVE_IMAGES == True:
@@ -250,7 +254,7 @@ def process_lines(lines: Sequence[StraightLine], min_slope: int, ymin: int, ymax
 def preprocess(image: np.ndarray):
     (imshape, center_x, center_y, top_lane_y_pos, offset_x, bottom_right_offset_x, bottom_left_x_pos) = determine_params(image)
     vertices = compute_vertices(imshape, center_x, center_y, top_lane_y_pos, offset_x, bottom_right_offset_x, bottom_left_x_pos)
-    save_images = True # change to true for saving pipeline images
+    save_images = False # change to true for saving pipeline images
     return(imshape, top_lane_y_pos, vertices, save_images)
 
 
