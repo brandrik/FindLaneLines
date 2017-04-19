@@ -16,7 +16,7 @@ The goals / steps of this project are the following:
 
 ### Reflection
 
-###1. Pipeline:
+### 1. Pipeline:
 
 The pipeline consists of 7 steps:
 
@@ -33,7 +33,7 @@ TEST
 
 In order to draw a single line on the left and right lanes, I processed the resulting lines from the Hough line detection in step 5 within in the function *process_lines* before using the *draw_lines* function. The latter one wasn’t changed in functionality.  
 
-####To step 6: Process lines
+#### To step 6: Process lines
 * in *process_lines* lines with slopes smaller than 0.4 are discarded to avoid lane detection errors caused by horizontal lines, i.e removing horizontal lines
 * grouping remaining lines into left and right lane
 * averaging each group yielding an averaged left and right line
@@ -76,7 +76,7 @@ If you'd like to include images to show how the pipeline works, here is how to i
 
 
 
-###2. Shortcomings
+### 2. Shortcomings
 
 The pipeline might not work well enough, if
 
@@ -88,7 +88,7 @@ The pipeline might not work well enough, if
 
 
 
-###3. Suggest possible improvements to your pipeline
+### 3. Suggest possible improvements to your pipeline
 
 Possible improvements:
 
