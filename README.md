@@ -1,11 +1,11 @@
 
-# **Finding Lane Lines on the Road**
+#**Finding Lane Lines on the Road**
 
 **Finding Lane Lines on the Road**
 
 The goals / steps of this project are the following:
-* Creating a pipeline that finds lane lines on the road
-* Reflect on the pipeline a written report
+* Make a pipeline that finds lane lines on the road
+* Reflect on your work in a written report
 
 
 [//]: # (Image References)
@@ -16,7 +16,7 @@ The goals / steps of this project are the following:
 
 ### Reflection
 
-### 1. Pipeline:
+###1. Pipeline:
 
 The pipeline consists of 7 steps:
 
@@ -28,12 +28,10 @@ The pipeline consists of 7 steps:
 6. Hough line detection
 7. Process lines ( removing non lane lines )
 8. Overlay the line image onto the original road image
-TEST
 
+In order to draw a single line on the left and right lanes, I processed the resulting lines from the Hough line detection in step 5 within in the function *process_lines* before using the *draw_lines* function. The latter one wasn’t changed in functionality.
 
-In order to draw a single line on the left and right lanes, I processed the resulting lines from the Hough line detection in step 5 within in the function *process_lines* before using the *draw_lines* function. The latter one wasn’t changed in functionality.  
-
-#### To step 6: Process lines
+####To step 6: Process lines
 * in *process_lines* lines with slopes smaller than 0.4 are discarded to avoid lane detection errors caused by horizontal lines, i.e removing horizontal lines
 * grouping remaining lines into left and right lane
 * averaging each group yielding an averaged left and right line
@@ -76,7 +74,7 @@ If you'd like to include images to show how the pipeline works, here is how to i
 
 
 
-### 2. Shortcomings
+###2. Shortcomings
 
 The pipeline might not work well enough, if
 
@@ -88,7 +86,7 @@ The pipeline might not work well enough, if
 
 
 
-### 3. Suggest possible improvements to your pipeline
+###3. Suggest possible improvements to your pipeline
 
 Possible improvements:
 
@@ -102,3 +100,23 @@ Possible improvements:
 * or with a model:
 An Improved Linear-Parabolic Model for Lane Following
 http://ieeexplore.ieee.org/abstract/document/1599093/
+
+
+* Other possible improvements:
+Add Equalizing of the gray-scale image as step 2b. After Removing noise using the gaussian blur a threshold via (cv2.adaptiveThreshold) might
+make the lane detection more robust against brightness changes (daylight variations, shadows, etc.).
+
+The resulting pipeline would be as follows:
+
+
+1. Using different color space HSV (Hue, Saturation, Value)
+2. Conversion to grayscale image
+3. Masking (Reducing processed image to region of interest)
+4. Equalized the grayscaled image (e.g. cv2.equalizeHist)
+5. Removing noise using gaussian blur
+6. Threshold (e.g. cv2.adaptiveThreshold)
+7. Skeletonize (skimage.morphology.skeletonize)
+8. Overpaint edges introduced by masking
+9. Hough line detection
+10. Process lines ( removing non lane lines )
+11. Overlay the line image onto the original road image
